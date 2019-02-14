@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        *{
+            padding: 0;
+            border: 0;
+            margin: 0;
+        }
+        #viewport{
+            position: absolute;
+            width: 800px;
+            height: 400px;
+            border: 1px solid #99a;
+            left: 100px;
+            top: 100px;
+            z-index: -1;
+            overflow: hidden;
+            box-sizing: border-box;
+            padding: 15px;
+        }
+        svg{
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+        #viewport > div{
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+        #viewport > div::-webkit-scrollbar {
+            display: none;
+        }
+        .container{
+            position: relative;
+            width: 10000px;
+            height: 10000px;
+        }
+        .node{
+            word-break: break-all;
+            word-wrap: break-word;
+            display: inline-block;
+            max-width: 900px;
+            vertical-align: middle;
+            line-height: 140%;
+        }
+        .tree-container{
+            text-align: center;
+            display: inline-block;
+            vertical-align: top;
+            user-select: none;
+        }
+        .tree-node{
+            position: relative;
+            display: inline-block;
+            text-align: left;
+            vertical-align: middle;
+            background-color: #fff;
+            border: 1px solid #aaa;
+            border-radius: 5px;
+            color: #666;
+            font-size: 16px;
+            padding: 10px;
+            font-family: 微软雅黑;
+            font-style: normal;
+            font-weight: normal;
+            min-width: 20px;
+
+        }
+        .tree-children .tree-container{
+            position: relative;
+            padding: 8px;
+        }
+        .root-tree > .tree-node{
+            font-size: 24px;
+        }
+        .tree-children{
+            vertical-align: middle;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div id="viewport">
+    <div>
+        <div class="container"></div>
+    </div>
+
+</div>
+<script>
+    var treeObject = {
+        'id': 'node_0001',
+        'name': '根节点',
+        'flag': 'root',
+        'children': [
+            {
+                'id': 'node_0002',
+                'name': '广州分中心的大家来了',
+                'parent': 'root',
+                'children': [
+                    {
+                        'id': 'node_0005',
+                        'name': '节点2-1',
+                        'children': null
+                    },
+                    {
+                        'id': 'node_0006',
+                        'name': '节点2-2',
+                        'children': [
+                            {
+                                'id': 'node_0012',
+                                'name': '节点3-1',
+                                'children': null
+                            },
+                            {
+                                'id': 'node_0013',
+                                'name': '节点3-2',
+                                'children': [
+                                    {
+                                        'id': 'node_0014',
+                                        'name': '节点4-1',
+                                        'children': null
+                                    },
+                                    {
+                                        'id': 'node_0015',
+                                        'name': '节点4-2',
+                                        'children': null
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'id': 'node_0007',
+                        'name': '节点2-3',
+                        'children': null
+                    },
+                    {
+                        'id': 'node_0008',
+                        'name': '节点2-4',
+                        'children': null
+                    }
+                ]
+            },
+            {
+                'id': 'node_0003',
+                'name': '节点1-2',
+                'parent': 'root',
+                'children': [
+                    {
+                        'id': 'node_0009',
+                        'name': '节点2-5',
+                        'children': null
+                    }
+                ]
+            },
+            {
+                'id': 'node_0004',
+                'name': '节点1-3',
+                'parent': 'root',
+                'children': [
+                    {
+                        'id': 'node_0010',
+                        'name': '节点2-6',
+                        'children': [
+                            {
+                                'id': 'node_0016',
+                                'name': '节点3-3',
+                                'children': [
+                                    {
+                                        'id': 'node_0017',
+                                        'name': '节点4-3',
+                                        'children': null
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'id': 'node_0011',
+                        'name': '节点2-7',
+                        'children': null
+                    }
+                ]
+            }
+        ]
+    }
+
+    var a = {
+        'id': 'node_0001',
+        'name': '根节点',
+        'flag': 'root',
+        'children': [
+            {
+                'id': 'node_0002',
+                'name': 'd单独地方点',
+                'parent': 'root'
+            }
+        ]
+    }
+
+    treeObject = a;
+
+    // 水平间隙
+    var horizontalGap = 20;
+    // 垂直间隙
+    var verticalGap = 35;
+    var lineColor = '#333';
+    var lineWidth = 1.5;
+
+    generateTree(treeObject);
+
+    function generateTree(obj){
+
+        var viewport = document.getElementById('viewport');
+        var container = document.getElementsByClassName('container')[0];
+        if(!viewport || !container){
+            console.error('未找到指定包裹容器 #viewport.container\n');
+            return;
+        }
+
+        // 添加树布局到容器
+        container.innerHTML = computeTree(obj);
+
+        var allWidth = 0;
+        var allHeight = 0;
+        var computed;
+        // 继续调整主树的定位值
+        var mainTrees = document.getElementsByClassName('main-tree') || [];
+        if(mainTrees.length > 0) {
+            for (var i in obj['children']) {
+                var j = parseInt(i);
+                // 处理主树的left值
+                mainTrees[j].style.left = allWidth + 'px';
+                computed = window.getComputedStyle(mainTrees[j], null);
+                var w = Math.ceil(parseFloat(computed['width']));
+                var p = parseInt(computed['padding']);
+                var b = parseInt(computed['borderWidth']);
+                allWidth += w + 2 * (p + b);
+                var h = parseFloat(computed['height']) + 2 * (p + b);
+                allHeight = Math.ceil(h > allHeight ? h : allHeight);
+            }
+        }
+
+        // 计算根元素大小
+        computed = window.getComputedStyle(document.getElementsByClassName('root-tree')[0], null);
+        var rootWidth = parseInt(computed['width']) + 2 * parseInt(computed['padding']) + 2 * parseInt(computed['borderWidth']);
+        var rootHeight = parseInt(computed['height']) + 2 * parseInt(computed['padding']) + 2 * parseInt(computed['borderWidth']);
+
+        // 处理主树的top值
+        for(var j = 0; j < mainTrees.length; j++){
+            mainTrees[j].style.top = rootHeight + verticalGap + 'px';
+        }
+
+        // 重新计算加入根元素后整个树的高度
+        allHeight += rootHeight + verticalGap;
+
+        // 处理根元素的left值
+        document.getElementsByClassName('root-tree')[0].style.left = (allWidth - rootWidth) / 2 + 'px';
+
+        container.style.width = allWidth + 'px';
+        container.style.height = allHeight + 'px';
+
+        // 调整container的居中位置，若小布局
+        // 计算视窗大小
+        var widthLimit = parseInt(viewport.offsetWidth);
+        var heightLimit = parseInt(viewport.offsetHeight);
+        if(allWidth <= widthLimit && allHeight <= heightLimit){
+            // 小布局
+            container.style.cssText += '; transform:translate3d(' + (widthLimit - allWidth) / 2 + 'px, ' + (heightLimit - allHeight) / 2 + 'px, 0);';
+        }else if(allWidth > widthLimit && allHeight <= heightLimit){
+            // 横向布局
+            container.style.cssText += '; transform:translate3d(0, ' + (heightLimit - allHeight) / 2 + 'px, 0);';
+        }else if(allWidth <= widthLimit && allHeight > heightLimit){
+            // 纵向布局
+            container.style.cssText += '; transform:translate3d(' + (widthLimit - allWidth) / 2 + 'px, 0,0);';
+        }
+
+        // 画线
+        computeLine(obj);
+    }
+
+    // // 计算多支森林的高度
+    // var getTreeHeight = function (obj, cur) {
+    //     var maxCount = 0;
+    //     cur = typeof cur === 'undefined' ? 0 : cur;
+    //     if(typeof obj !== 'object' || JSON.stringify(obj) === '{}')
+    //         return 0;
+    //     if(!obj['children'] || obj['children'].length === 0){
+    //         return cur + 1;
+    //     }
+    //     for(var i in obj['children']){
+    //         var count = getTreeHeight(obj['children'][i], cur + 1);
+    //         if(count >= maxCount)
+    //             maxCount = count;
+    //     }
+    //     return maxCount;
+    // }
+
+    // // 计算多支森林的叶子节点个数
+    // var getLeaves = function (obj) {
+    //     var leaf = 0;
+    //     if(typeof obj !== 'object' || JSON.stringify(obj) === '{}')
+    //         return 0;
+    //     if(!obj['children'] || obj['children'].length === 0)
+    //         return 1;
+    //     for(var i in obj['children']){
+    //         leaf += getLeaves(obj['children'][i]);
+    //     }
+    //     return leaf;
+    // }
+    //
+    // var treeWidth = getLeaves(treeObject);
+    // var treeHeight = getTreeHeight(treeObject)
+
+
+    /**
+     * 画树形结构结点布局
+     * @param 树形结构obj
+     */
+    function computeTree(obj) {
+
+        if(typeof obj !== 'object' || JSON.stringify(obj) === '{}')
+            return;
+
+        // 结点类型处理
+        var nodeType = (obj['flag'] === 'root' || obj['parent'] === 'root') ? 'special' : 'normal';
+
+        // 类处理
+        var classText = 'class="tree-container';
+        if(obj['flag'] === 'root' || obj['parent'] === 'root'){
+            classText += obj['flag'] === 'root' ? ' root-tree"' : ' main-tree"';
+        }else{
+            classText += '"';
+        }
+
+        // 样式处理
+        var style = nodeType === 'special' ? ' style="position:absolute;padding:' + horizontalGap / 2 + 'px;"' : '';
+
+        // 拼接html
+        var html = "<div " + classText + style + ">" +
+            '<div class="tree-node" ' + 'id="' + obj['id'] + '"><p class="node">' + obj['name'] + '</p></div>';
+
+        // 处理根结点
+        if(obj['flag'] === 'root'){
+            html += '</div>';
+            for(var i in obj['children']){
+                html += computeTree(obj['children'][i]);
+            }
+            return html;
+        }else {
+            if(obj['children'] && obj['children'].length > 0){
+                html += '<div class="tree-children"' + ' style="margin-top: ' + verticalGap + 'px;"' + '>';
+                for(var i in obj['children']){
+                    html += computeTree(obj['children'][i]);
+                }
+                html += "</div></div>";
+                return html;
+            }else{
+                html += '</div>';
+                return html;
+            }
+        }
+    }
+
+
+    /**
+     * 把生成的结点连线
+     * @param 树形结构obj
+     */
+    function computeLine(obj){
+        if(typeof obj !== 'object' || JSON.stringify(obj) === '{}')
+            return;
+        // 先布局一个基于整个子树的svg，内置一个g标签
+        var svg = addSvg();
+        // 当前树的根结点
+        var currentNode;
+
+        if(obj['children'] && obj['children'].length > 0){
+
+            // 计算当前根元素的占用宽高
+            currentNode = document.getElementById(obj['id']);
+            currentNode = obj['flag'] === 'root' ? currentNode.parentNode : currentNode;
+            var currentComputed = window.getComputedStyle(currentNode, null);
+            var currentPrefix = 2 * parseInt(currentComputed['padding']) + 2 * parseInt(currentComputed['borderWidth']);
+            var currentHeight = parseInt(currentComputed['height']) + currentPrefix;
+
+            // 计算整个子树svg的占用宽高
+            var parentComputed = window.getComputedStyle(currentNode.parentNode, null);
+            var parentPrefix = 2 * parseInt(parentComputed['padding']) + 2 * parseInt(parentComputed['borderWidth']);
+            var parentWidth = parseInt(parentComputed['width']) + parentPrefix;
+            var parentTop =  parseInt(parentComputed['padding']) + parseInt(parentComputed['borderWidth']);
+
+            // 确定整个子树svg下笔中心点
+            var centerX = parentWidth / 2;
+            var centerY = currentHeight + parentTop;
+
+            // 区分根树和子树的下笔Y坐标
+            centerY = obj['flag'] === 'root' ? centerY - parseInt(currentComputed['padding']) : centerY;
+            svg.children[0].setAttribute('transform', 'translate(' + centerX + ',' + centerY + ')');
+
+            // 从下笔中心点画出分散线
+            // 分散线基于子树的个数以及各个子树的占用大小
+            var w = parentTop; // 父亲树的padding值取一个即可
+            for(var j = 0; j < obj['children'].length; j++){
+                var childTree = document.getElementById(obj['children'][j]['id']).parentNode;
+                var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                p.setAttribute('stroke', lineColor);
+                p.setAttribute('stroke-width', lineWidth);
+                var computed = window.getComputedStyle(childTree, null);
+                var prefix = 2 * parseInt(computed['padding']) + 2 * parseInt(computed['borderWidth']);
+                var width = parseInt(computed['width']) + prefix;
+                var leftX = w + width / 2;
+                // 区分根树和子树的结笔Y坐标
+                var _y = verticalGap + parseInt(computed['padding']);
+                _y = obj['flag'] === 'root' ? _y + parseInt(computed['padding']) : _y;
+                p.setAttribute('d', "M0 0 L" + (leftX - centerX) + ' ' + _y);
+
+                w += width;
+                svg.children[0].appendChild(p);
+            }
+            currentNode.parentNode.appendChild(svg);
+        }
+
+        // 递归画线子树的子树
+        for(var i in obj['children']){
+            computeLine(obj['children'][i]);
+        }
+    }
+
+
+    /**
+     * 生成svg，内含g标签
+     * @param 无
+     */
+    function addSvg(){
+        var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        s.setAttribute('width', '100%');
+        s.setAttribute('height', '100%');
+        s.setAttribute('xmlns', "http://www.w3.org/2000/svg");
+        s.setAttribute('version', "1.1");
+        var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        s.appendChild(g);
+        return s;
+    }
+
+    /**
+     * 将视图移动到指定内容
+     * @param 指定内容ID
+     */
+    function moveToView(id) {
+        var _l = 0, _t = 0;
+        var node = document.getElementById(id);
+        while(node.className.indexOf('main-tree') < 0){
+            _l += node.offsetLeft;
+            _t += node.offsetTop;
+            node = node.parentNode;
+        }
+        _l += parseInt(node.style.left);
+        _t += parseInt(node.style.top);
+        document.getElementById('viewport').children[0].scrollTo(_l, _t)
+    }
+
+
+
+</script>
+</body>
+</html>
